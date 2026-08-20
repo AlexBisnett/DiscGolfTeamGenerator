@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GitHub Pages Test</title>
+    <script src="https://unpkg.com/htmx.org@2.0.3"></script>
     <style>
         * {
             margin: 0;
@@ -77,6 +78,24 @@
             color: #718096;
             font-size: 14px;
         }
+        .htmx-demo {
+            margin-top: 24px;
+            padding: 20px;
+            background: #edf2f7;
+            border-radius: 6px;
+        }
+        .htmx-demo h2 {
+            font-size: 18px;
+            margin-bottom: 12px;
+            color: #2d3748;
+        }
+        #htmx-content {
+            padding: 12px;
+            background: white;
+            border-radius: 4px;
+            margin-top: 12px;
+            min-height: 50px;
+        }
     </style>
 </head>
 <body>
@@ -89,7 +108,25 @@
             <span class="counter-value" id="visitCount">0</span>
             <span class="counter-label">visits from this device</span>
         </div>
+
+        <div class="htmx-demo">
+            <h2>HTMX Demo</h2>
+            <button hx-get="#demo-content" hx-target="#htmx-content" hx-swap="innerHTML">
+                Click to Load Content
+            </button>
+            <div id="htmx-content">
+                <em>Click the button above</em>
+            </div>
+        </div>
     </div>
+
+    <template id="demo-content">
+        <strong>✓ HTMX is working!</strong><br>
+        Clicked at: <span id="click-time"></span>
+        <script>
+            document.getElementById('click-time').textContent = new Date().toLocaleTimeString();
+        </script>
+    </template>
 
     <script>
         // Load and increment visit counter
