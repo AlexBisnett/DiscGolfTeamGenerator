@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Pages Test</title>
+    <title>Name List Manager</title>
     <script src="https://unpkg.com/htmx.org@2.0.3"></script>
     <style>
         * {
@@ -25,7 +25,7 @@
             border-radius: 12px;
             padding: 32px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 400px;
+            max-width: 500px;
             width: 100%;
         }
         h1 {
@@ -33,23 +33,85 @@
             margin-bottom: 24px;
             font-size: 28px;
         }
+        .input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
         input {
-            width: 100%;
+            flex: 1;
             padding: 12px;
             border: 2px solid #ddd;
             border-radius: 6px;
             font-size: 16px;
-            margin-bottom: 12px;
         }
         input:focus {
             outline: none;
             border-color: #667eea;
         }
-        button {
-            width: 100%;
+        .add-btn {
+            width: 50px;
             padding: 12px;
-            background: #667eea;
+            background: #48bb78;
             color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .add-btn:hover:not(:disabled) {
+            background: #38a169;
+        }
+        .add-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+        .name-list {
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .name-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: #f7fafc;
+            border-radius: 6px;
+            border: 2px solid #e2e8f0;
+        }
+        .name-text {
+            color: #2d3748;
+            font-size: 16px;
+        }
+        .remove-btn {
+            width: 32px;
+            height: 32px;
+            background: #f56565;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .remove-btn:hover {
+            background: #e53e3e;
+        }
+        .bottom-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        .bottom-buttons button {
+            flex: 1;
+            padding: 12px;
             border: none;
             border-radius: 6px;
             font-size: 16px;
@@ -57,98 +119,157 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        button:hover {
+        .save-btn {
+            background: #667eea;
+            color: white;
+        }
+        .save-btn:hover {
             background: #5568d3;
         }
-        .counter {
-            margin-top: 24px;
-            padding: 20px;
-            background: #f7fafc;
-            border-radius: 6px;
+        .clear-btn {
+            background: #ed8936;
+            color: white;
+        }
+        .clear-btn:hover {
+            background: #dd6b20;
+        }
+        .empty-state {
             text-align: center;
-        }
-        .counter-value {
-            font-size: 48px;
-            font-weight: 700;
-            color: #667eea;
-            display: block;
-            margin-bottom: 8px;
-        }
-        .counter-label {
-            color: #718096;
-            font-size: 14px;
-        }
-        .htmx-demo {
-            margin-top: 24px;
-            padding: 20px;
-            background: #edf2f7;
-            border-radius: 6px;
-        }
-        .htmx-demo h2 {
-            font-size: 18px;
-            margin-bottom: 12px;
-            color: #2d3748;
-        }
-        #htmx-content {
-            padding: 12px;
-            background: white;
-            border-radius: 4px;
-            margin-top: 12px;
-            min-height: 50px;
+            padding: 32px;
+            color: #a0aec0;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>GitHub Pages Test ✓</h1>
-        <input type="text" id="nameInput" placeholder="Enter your name">
-        <button onclick="saveName()">Save to LocalStorage</button>
+        <h1>Name List</h1>
 
-        <div class="counter">
-            <span class="counter-value" id="visitCount">0</span>
-            <span class="counter-label">visits from this device</span>
+        <div class="input-row">
+            <input type="text" id="nameInput" placeholder="Enter a name" autocomplete="off">
+            <button class="add-btn" id="addBtn" disabled
+                    hx-post="/add-name"
+                    hx-trigger="click"
+                    hx-target="#nameList"
+                    hx-swap="innerHTML"
+                    onclick="addName()">+</button>
         </div>
 
-        <div class="htmx-demo">
-            <h2>HTMX Demo</h2>
-            <button hx-get="#demo-content" hx-target="#htmx-content" hx-swap="innerHTML">
-                Click to Load Content
-            </button>
-            <div id="htmx-content">
-                <em>Click the button above</em>
-            </div>
+        <div class="name-list" id="nameList">
+            <div class="empty-state">No names yet. Add one above!</div>
+        </div>
+
+        <div class="bottom-buttons">
+            <button class="save-btn" onclick="saveList()">Save List</button>
+            <button class="clear-btn"
+                    hx-post="/clear"
+                    hx-trigger="click"
+                    hx-target="#nameList"
+                    hx-swap="innerHTML"
+                    onclick="clearList()">Clear All</button>
         </div>
     </div>
 
-    <template id="demo-content">
-        <strong>✓ HTMX is working!</strong><br>
-        Clicked at: <span id="click-time"></span>
-        <script>
-            document.getElementById('click-time').textContent = new Date().toLocaleTimeString();
-        </script>
-    </template>
-
     <script>
-        // Load and increment visit counter
-        let visits = parseInt(localStorage.getItem('visitCount') || '0');
-        visits++;
-        localStorage.setItem('visitCount', visits);
-        document.getElementById('visitCount').textContent = visits;
+        let names = [];
 
-        // Load saved name if exists
-        const savedName = localStorage.getItem('userName');
-        if (savedName) {
-            document.getElementById('nameInput').value = savedName;
-        }
-
-        // Save name function
-        function saveName() {
-            const name = document.getElementById('nameInput').value;
-            if (name.trim()) {
-                localStorage.setItem('userName', name);
-                alert('Saved! Refresh the page to see it persist.');
+        // Load names from localStorage on page load
+        function loadNames() {
+            const saved = localStorage.getItem('nameList');
+            if (saved) {
+                names = JSON.parse(saved);
+                renderNames();
             }
         }
+
+        // Render the name list
+        function renderNames() {
+            const container = document.getElementById('nameList');
+
+            if (names.length === 0) {
+                container.innerHTML = '<div class="empty-state">No names yet. Add one above!</div>';
+                return;
+            }
+
+            container.innerHTML = names.map((name, index) => `
+                <div class="name-box">
+                    <span class="name-text">${escapeHtml(name)}</span>
+                    <button class="remove-btn"
+                            hx-post="/remove/${index}"
+                            hx-trigger="click"
+                            hx-target="#nameList"
+                            hx-swap="innerHTML"
+                            onclick="removeName(${index})">×</button>
+                </div>
+            `).join('');
+        }
+
+        // Add a name to the list
+        function addName() {
+            const input = document.getElementById('nameInput');
+            const name = input.value.trim();
+
+            if (name) {
+                names.push(name);
+                input.value = '';
+                renderNames();
+                updateAddButton();
+            }
+            return false; // Prevent HTMX from making actual request
+        }
+
+        // Remove a name from the list
+        function removeName(index) {
+            names.splice(index, 1);
+            renderNames();
+            return false; // Prevent HTMX from making actual request
+        }
+
+        // Save the list to localStorage
+        function saveList() {
+            localStorage.setItem('nameList', JSON.stringify(names));
+            alert('List saved!');
+        }
+
+        // Clear all names
+        function clearList() {
+            if (confirm('Are you sure you want to clear all names?')) {
+                names = [];
+                localStorage.removeItem('nameList');
+                renderNames();
+            }
+            return false; // Prevent HTMX from making actual request
+        }
+
+        // Update add button state
+        function updateAddButton() {
+            const input = document.getElementById('nameInput');
+            const btn = document.getElementById('addBtn');
+            btn.disabled = input.value.trim() === '';
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Intercept HTMX requests and handle them client-side
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            event.preventDefault();
+        });
+
+        // Event listeners
+        document.getElementById('nameInput').addEventListener('input', updateAddButton);
+        document.getElementById('nameInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !document.getElementById('addBtn').disabled) {
+                addName();
+            }
+        });
+
+        // Load names on page load
+        loadNames();
     </script>
 </body>
 </html>
