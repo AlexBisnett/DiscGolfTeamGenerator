@@ -20,27 +20,48 @@
             justify-content: center;
             padding: 20px;
         }
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 900px;
+            width: 100%;
+        }
         .card {
             background: white;
             border-radius: 12px;
             padding: 32px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 500px;
-            width: 100%;
+            flex: 1;
+        }
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 200px;
         }
         h1 {
             color: #333;
             margin-bottom: 24px;
             font-size: 28px;
         }
+        h2 {
+            color: #333;
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
         .input-row {
             display: flex;
             gap: 8px;
             margin-bottom: 24px;
         }
-        input {
+        .input-wrapper {
             flex: 1;
-            padding: 12px;
+            position: relative;
+        }
+        input {
+            width: 100%;
+            padding: 12px 40px 12px 12px;
             border: 2px solid #ddd;
             border-radius: 6px;
             font-size: 16px;
@@ -48,6 +69,32 @@
         input:focus {
             outline: none;
             border-color: #667eea;
+        }
+        .clear-input-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            background: #cbd5e0;
+            color: #4a5568;
+            border: none;
+            border-radius: 50%;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            line-height: 1;
+        }
+        .clear-input-btn.show {
+            display: flex;
+        }
+        .clear-input-btn:hover {
+            background: #a0aec0;
         }
         .add-btn {
             width: 50px;
@@ -67,6 +114,17 @@
         .add-btn:disabled {
             background: #cbd5e0;
             cursor: not-allowed;
+        }
+        /* Name validation error message */
+        .name-error-message {
+            color: #e53e3e;
+            font-size: 14px;
+            margin-top: -12px;
+            margin-bottom: 12px;
+            display: none;
+        }
+        .name-error-message.show {
+            display: block;
         }
         .name-list {
             margin-bottom: 24px;
@@ -139,113 +197,210 @@
             color: #a0aec0;
             font-style: italic;
         }
+        .complete-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .complete-name {
+            padding: 8px 12px;
+            background: #edf2f7;
+            border-radius: 4px;
+            color: #4a5568;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>Name List</h1>
+    <div class="container">
+        <div class="card">
+            <h1>Current List</h1>
 
-        <div class="input-row">
-            <input type="text" id="nameInput" placeholder="Enter a name" autocomplete="off">
-            <button class="add-btn" id="addBtn" disabled
-                    hx-post="/add-name"
-                    hx-trigger="click"
-                    hx-target="#nameList"
-                    hx-swap="innerHTML"
-                    onclick="addName()">+</button>
+            <div class="input-row">
+                <div class="input-wrapper">
+                    <input type="text" id="nameInput" placeholder="Enter a name" autocomplete="off">
+                    <button class="clear-input-btn" id="clearInputBtn" onclick="clearInput()">×</button>
+                </div>
+                <button class="add-btn" id="addBtn" disabled
+                        hx-post="/add-name"
+                        hx-trigger="click"
+                        hx-target="#currentList"
+                        hx-swap="innerHTML"
+                        onclick="addName()">+</button>
+            </div>
+            <div class="name-error-message" id="nameErrorMessage"></div>
+
+            <div class="name-list" id="currentList">
+                <div class="empty-state">No names yet. Add one above!</div>
+            </div>
+
+            <div class="bottom-buttons">
+                <button class="save-btn" onclick="saveList()">Save List</button>
+                <button class="clear-btn"
+                        hx-post="/clear"
+                        hx-trigger="click"
+                        hx-target="#currentList"
+                        hx-swap="innerHTML"
+                        onclick="clearList()">Clear All</button>
+            </div>
         </div>
 
-        <div class="name-list" id="nameList">
-            <div class="empty-state">No names yet. Add one above!</div>
-        </div>
-
-        <div class="bottom-buttons">
-            <button class="save-btn" onclick="saveList()">Save List</button>
-            <button class="clear-btn"
-                    hx-post="/clear"
-                    hx-trigger="click"
-                    hx-target="#nameList"
-                    hx-swap="innerHTML"
-                    onclick="clearList()">Clear All</button>
+        <div class="sidebar">
+            <h2>Complete List</h2>
+            <div class="complete-list" id="completeList">
+                <div class="empty-state" style="padding: 16px; font-size: 14px;">No names yet</div>
+            </div>
         </div>
     </div>
 
     <script>
-        let names = [];
+        let currentList = [];
+        let completeList = [];
 
         // Load names from localStorage on page load
         function loadNames() {
-            const saved = localStorage.getItem('nameList');
-            if (saved) {
-                names = JSON.parse(saved);
-                renderNames();
+            const savedCurrent = localStorage.getItem('currentList');
+            const savedComplete = localStorage.getItem('completeList');
+
+            if (savedCurrent) {
+                currentList = JSON.parse(savedCurrent);
             }
+            if (savedComplete) {
+                completeList = JSON.parse(savedComplete);
+            }
+
+            renderCurrentList();
+            renderCompleteList();
         }
 
-        // Render the name list
-        function renderNames() {
-            const container = document.getElementById('nameList');
+        // Render the current list
+        function renderCurrentList() {
+            const container = document.getElementById('currentList');
 
-            if (names.length === 0) {
+            if (currentList.length === 0) {
                 container.innerHTML = '<div class="empty-state">No names yet. Add one above!</div>';
                 return;
             }
 
-            container.innerHTML = names.map((name, index) => `
+            container.innerHTML = currentList.map((name, index) => `
                 <div class="name-box">
                     <span class="name-text">${escapeHtml(name)}</span>
                     <button class="remove-btn"
                             hx-post="/remove/${index}"
                             hx-trigger="click"
-                            hx-target="#nameList"
+                            hx-target="#currentList"
                             hx-swap="innerHTML"
                             onclick="removeName(${index})">×</button>
                 </div>
             `).join('');
         }
 
-        // Add a name to the list
+        // Render the complete list
+        function renderCompleteList() {
+            const container = document.getElementById('completeList');
+
+            if (completeList.length === 0) {
+                container.innerHTML = '<div class="empty-state" style="padding: 16px; font-size: 14px;">No names yet</div>';
+                return;
+            }
+
+            container.innerHTML = completeList.map(name => `
+                <div class="complete-name">${escapeHtml(name)}</div>
+            `).join('');
+        }
+
+        // Add a name to both lists
         function addName() {
             const input = document.getElementById('nameInput');
             const name = input.value.trim();
 
             if (name) {
-                names.push(name);
+                // Check if name already exists in current list (case-insensitive)
+                const nameInCurrent = currentList.some(n => n.toLowerCase() === name.toLowerCase());
+                if (nameInCurrent) {
+                    showNameError('That name is already in the list');
+                    return false;
+                }
+
+                currentList.push(name);
+
+                // Only add to complete list if not already there (case-insensitive)
+                const nameInComplete = completeList.some(n => n.toLowerCase() === name.toLowerCase());
+                if (!nameInComplete) {
+                    completeList.push(name);
+                }
+
                 input.value = '';
-                renderNames();
+                hideNameError();
+                renderCurrentList();
+                renderCompleteList();
                 updateAddButton();
             }
-            return false; // Prevent HTMX from making actual request
+            return false;
         }
 
-        // Remove a name from the list
+        // Remove a name from current list only
         function removeName(index) {
-            names.splice(index, 1);
-            renderNames();
-            return false; // Prevent HTMX from making actual request
+            currentList.splice(index, 1);
+            renderCurrentList();
+            return false;
         }
 
-        // Save the list to localStorage
+        // Save both lists to localStorage
         function saveList() {
-            localStorage.setItem('nameList', JSON.stringify(names));
-            alert('List saved!');
+            localStorage.setItem('currentList', JSON.stringify(currentList));
+            localStorage.setItem('completeList', JSON.stringify(completeList));
+            alert('Lists saved!');
         }
 
-        // Clear all names
+        // Clear all names from both lists
         function clearList() {
             if (confirm('Are you sure you want to clear all names?')) {
-                names = [];
-                localStorage.removeItem('nameList');
-                renderNames();
+                currentList = [];
+                completeList = [];
+                localStorage.removeItem('currentList');
+                localStorage.removeItem('completeList');
+                renderCurrentList();
+                renderCompleteList();
             }
-            return false; // Prevent HTMX from making actual request
+            return false;
         }
 
         // Update add button state
         function updateAddButton() {
             const input = document.getElementById('nameInput');
             const btn = document.getElementById('addBtn');
+            const clearBtn = document.getElementById('clearInputBtn');
+
             btn.disabled = input.value.trim() === '';
+
+            // Show/hide clear button
+            if (input.value) {
+                clearBtn.classList.add('show');
+            } else {
+                clearBtn.classList.remove('show');
+            }
+        }
+
+        // Clear input box
+        function clearInput() {
+            const input = document.getElementById('nameInput');
+            input.value = '';
+            input.focus();
+            updateAddButton();
+            hideNameError();
+        }
+
+        // === Name validation error handling ===
+        function showNameError(message) {
+            const errorEl = document.getElementById('nameErrorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+        }
+
+        function hideNameError() {
+            const errorEl = document.getElementById('nameErrorMessage');
+            errorEl.classList.remove('show');
         }
 
         // Escape HTML to prevent XSS
@@ -261,7 +416,10 @@
         });
 
         // Event listeners
-        document.getElementById('nameInput').addEventListener('input', updateAddButton);
+        document.getElementById('nameInput').addEventListener('input', () => {
+            updateAddButton();
+            hideNameError();
+        });
         document.getElementById('nameInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !document.getElementById('addBtn').disabled) {
                 addName();
